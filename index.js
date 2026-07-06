@@ -51,9 +51,7 @@ try {
 const MAIN_MENU_TEXT = `0️⃣ Main Menu
 
 Welcome to ImmiWing! Your trusted partner for global immigration and visa services.
-Please choose the option that best matches your interest:
-
-Buttons:
+Please type the number of the option that best matches your interest:
 1️⃣ Skilled Immigration
 2️⃣ Business Immigration
 3️⃣ Direct Citizenship Programs
@@ -74,7 +72,7 @@ It is ideal for people who want:
 • Family settlement
 • Healthcare + education benefits
 
-Buttons:
+Type the number to continue:
 1️⃣ Canada
 2️⃣ Australia
 3️⃣ I Want to Apply
@@ -87,7 +85,7 @@ Canada offers two main pathways for skilled workers:
 ① Federal Immigration (Federal Skilled Worker through Express Entry)
 ② Provincial Nominee Program (PNP)
 
-Buttons:
+Type the number to continue:
 1️⃣ Federal Skilled Worker
 2️⃣ Quebec Skilled Worker
 3️⃣ Provincial Nominee Programs
@@ -107,7 +105,7 @@ Eligibility:
 Express Entry process:
 Submit your profile → receive CRS score → get invitation → submit application within 60 days.
 
-Buttons:
+Type the number to continue:
 1️⃣ I Want to Apply
 2️⃣ Main Menu`;
 
@@ -122,7 +120,7 @@ Eligibility:
 Based on:
 Education, experience, language, age, relatives in Quebec, funds.
 
-Buttons:
+Type the number to continue:
 1️⃣ I Want to Apply
 2️⃣ Main Menu`;
 
@@ -134,7 +132,7 @@ Apply to province → get Nomination → apply federally.
 Popular PNPs:
 Ontario, Alberta, Saskatchewan, Manitoba, Nova Scotia.
 
-Buttons:
+Type the number to continue:
 1️⃣ I Want to Apply
 2️⃣ Main Menu`;
 
@@ -142,7 +140,7 @@ const PILOT_PROGRAMS_TEXT = `4️⃣ Pilot Programs
 
 Atlantic Immigration Pilot & Rural/Northern Pilot.
 
-Buttons:
+Type the number to continue:
 1️⃣ I Want to Apply
 2️⃣ Main Menu`;
 
@@ -156,7 +154,7 @@ Visa Types:
 • 190 Skilled Nominated
 • 491 Skilled Regional
 
-Buttons:
+Type the number to continue:
 1️⃣ I Want to Apply
 2️⃣ Main Menu`;
 
@@ -165,7 +163,7 @@ const PERM_SKILLED_AUS_TEXT = `Permanent Skilled Migration Visas (Australia)
 Eligibility:
 Work experience, education, English skills.
 
-Buttons:
+Type the number to continue:
 1️⃣ Permanent Skilled Migration Visas
 2️⃣ I Want to Apply
 3️⃣ Main Menu`;
@@ -174,14 +172,14 @@ const BUSINESS_IMMIGRATION_TEXT = `--------------------------------------
 2️⃣ Business Immigration
 --------------------------------------
 
-Buttons:
+Type the number to continue:
 1️⃣ Canada
 2️⃣ I Want to Apply
 3️⃣ Main Menu`;
 
 const CANADA_BUSINESS_TEXT = `🇨🇦 Canada (Business Immigration)
 
-Buttons:
+Type the number to continue:
 1️⃣ Federal Business Immigration
 2️⃣ Provincial Business Immigration
 3️⃣ Quebec Business Immigration
@@ -194,7 +192,7 @@ Programs:
 • Self-Employed Program
 • Start-Up Visa
 
-Buttons:
+Type the number to continue:
 1️⃣ I Want to Apply
 2️⃣ Main Menu`;
 
@@ -202,7 +200,7 @@ const PROVINCIAL_BUSINESS_TEXT = `2️⃣ Provincial Business Immigration
 
 Invest → manage → create jobs.
 
-Buttons:
+Type the number to continue:
 1️⃣ I Want to Apply
 2️⃣ Main Menu`;
 
@@ -212,7 +210,7 @@ Programs:
 • Self-Employed Worker
 • Entrepreneur Program
 
-Buttons:
+Type the number to continue:
 1️⃣ I Want to Apply
 2️⃣ Main Menu`;
 
@@ -228,7 +226,7 @@ Countries:
 • Turkey
 • Moldova
 
-Buttons:
+Type the number to continue:
 1️⃣ I Want to Apply
 2️⃣ Main Menu`;
 
@@ -241,7 +239,7 @@ Residency/citizenship via:
 • Real estate
 • Business creation
 
-Buttons:
+Type the number to continue:
 1️⃣ I Want to Apply
 2️⃣ Main Menu`;
 
@@ -255,7 +253,7 @@ UK, USA, Canada, Australia, New Zealand, Singapore, Ireland, France, Germany, Sw
 We assist with:
 Admission criteria, essays, resumes, English skills, documentation.
 
-Buttons:
+Type the number to continue:
 1️⃣ I Want to Apply
 2️⃣ Main Menu`;
 
@@ -271,7 +269,7 @@ Includes:
 
 We assist with eligibility, documentation, and application success.
 
-Buttons:
+Type the number to continue:
 1️⃣ I Want to Apply
 2️⃣ Main Menu`;
 
@@ -548,23 +546,24 @@ CURRENT MENU STATE: ${currentState}
 CURRENT MENU OPTIONS:
 ${currentMenuText}
 
-AVAILABLE BUTTONS IN CURRENT MENU:
+AVAILABLE OPTIONS IN CURRENT MENU:
 ${Object.entries(currentNode?.options || {}).map(([num, opt]) => {
   const optionText = opt.type === "STATE" ? WORKFLOW[opt.next]?.message.split("\n")[0] || opt.next :
                      opt.type === "APPLY" ? "I Want to Apply (starts lead collection)" :
                      opt.type === "MAIN" ? "Main Menu" : num;
-  return `Button ${num}: ${optionText}`;
+  return `Type ${num}: ${optionText}`;
 }).join("\n")}
 
 WORKFLOW STRUCTURE:
-- Users navigate using numbered buttons (1, 2, 3, etc.)
+- Users navigate by TYPING numbers (1, 2, 3, etc.) - NOT buttons
 - "I Want to Apply" or "Apply" triggers lead collection form
-- "Main Menu" or "0" returns to main menu
+- "Main Menu" or "0" returns to main menu at any time
+- During lead collection, typing "0" cancels the form and returns to main menu
 - Lead collection asks: Full Name, Phone, DOB, Current Country and City, Highest Education, Total Years of Education, Total Work Experience, Marital Status, Spouse Education, Spouse Profession, Relatives in Canada/Australia
-- After lead collection, user chooses: Online Meeting or Visit Office`;
+- After lead collection, user receives confirmation message`;
 
   // Build context from knowledge base
-  const systemPrompt = `You are a helpful customer service assistant for ImmiWing, an immigration and visa consulting firm. You MUST work WITH the existing menu workflow system.
+  const systemPrompt = `You are a friendly and intelligent customer service assistant for ImmiWing, an immigration and visa consulting firm. You are conversational, helpful, and work WITH the existing menu workflow system.
 
 COMPANY INFORMATION:
 ${JSON.stringify(knowledgeBase.company_overview, null, 2)}
@@ -584,20 +583,22 @@ ${knowledgeBase.verify_questions.join("\n")}
 ${workflowInfo}
 
 CRITICAL INSTRUCTIONS:
-1. ALWAYS guide users to use the BUTTONS/MENU OPTIONS shown above. Reference the specific button numbers (e.g., "Press button 1" or "Select option 3").
-2. If user wants to APPLY or START APPLICATION, tell them to use button "I Want to Apply" or type "I Want to Apply" - this will trigger the lead collection workflow.
-3. Answer questions based on knowledge base, but ALWAYS connect answers back to the menu options and buttons.
-4. If user asks about a service, guide them to the relevant menu button. For example:
-   - Skilled Immigration → Button 1 in Main Menu
-   - Business Immigration → Button 2 in Main Menu
-   - Student Visa → Button 5 in Main Menu
+1. Be conversational and friendly - use natural language like "Sure!", "Great question!", "I'd be happy to help!"
+2. ALWAYS guide users to TYPE the number of their choice (e.g., "Type 1 for Skilled Immigration" or "Type 2 to learn more").
+3. If user wants to APPLY or START APPLICATION, tell them to type the number for "I Want to Apply" or type "I Want to Apply" directly.
+4. Answer questions based on knowledge base, but ALWAYS connect answers back to the menu options with specific numbers.
+5. If user asks about a service, guide them to the relevant menu option. For example:
+   - Skilled Immigration → Type 1 in Main Menu
+   - Business Immigration → Type 2 in Main Menu
+   - Student Visa → Type 5 in Main Menu
    - etc.
-5. Keep responses concise and WhatsApp-friendly (2-3 short paragraphs max).
-6. Always end with guidance on which button to press (e.g., "Press button 1 to learn more" or "Type 'Main Menu' to see all options").
-7. Never make guarantees about visa approvals.
-8. If user seems confused, show them the current menu options clearly with button numbers.
-9. Work WITH the workflow system - don't try to replace it. Guide users through the menu structure.
-10. If user is already in a submenu, reference the buttons available in that specific menu.`;
+6. Keep responses concise and WhatsApp-friendly (2-3 short paragraphs max).
+7. Always end with clear guidance on what to type next (e.g., "Type 1 to learn more" or "Type 'Main Menu' to see all options").
+8. Never make guarantees about visa approvals - be realistic and helpful.
+9. If user seems confused, show them the current menu options clearly with numbers.
+10. Work WITH the workflow system - guide users through the menu structure naturally.
+11. If user is already in a submenu, reference the options available in that specific menu.
+12. Be proactive - if you can anticipate what the user needs next, suggest the relevant option.`;
 
   try {
     const response = await axios.post(
@@ -645,7 +646,6 @@ function getSession(userId) {
       menuState: "MAIN_MENU",
       leadStep: null,
       leadData: {},
-      meetingState: null,
     };
   }
   return sessions[userId];
@@ -666,26 +666,26 @@ function parseNumericOption(text) {
  * Lead form questions (unchanged)
  */
 const LEAD_QUESTIONS = [
-  { key: "fullName", text: "Please share your Full Name:" },
-  { key: "phone", text: "Please share your Phone Number:" },
-  { key: "dob", text: "Please share your Date of Birth (DD-MM-YYYY):" },
-  { key: "countryCity", text: "Please share your current Country and City of residence:" },
-  { key: "highestEducation", text: "What is your highest level of Education? (e.g. Bachelors, Masters, PhD)" },
-  { key: "yearsOfEducation", text: "How many years of education do you have in total? (e.g. 14, 16, 18 years)" },
-  { key: "workExperience", text: "How many years of total work experience do you have?" },
-  { key: "maritalStatus", text: "What is your Marital Status?" },
+  { key: "fullName", text: "Please share your Full Name:\n\n(Press 0 to cancel and return to main menu)" },
+  { key: "phone", text: "Please share your Phone Number:\n\n(Press 0 to cancel and return to main menu)" },
+  { key: "dob", text: "Please share your Date of Birth (DD-MM-YYYY):\n\n(Press 0 to cancel and return to main menu)" },
+  { key: "countryCity", text: "Please share your current Country and City of residence:\n\n(Press 0 to cancel and return to main menu)" },
+  { key: "highestEducation", text: "What is your highest level of Education? (e.g. Bachelors, Masters, PhD)\n\n(Press 0 to cancel and return to main menu)" },
+  { key: "yearsOfEducation", text: "How many years of education do you have in total? (e.g. 14, 16, 18 years)\n\n(Press 0 to cancel and return to main menu)" },
+  { key: "workExperience", text: "How many years of total work experience do you have?\n\n(Press 0 to cancel and return to main menu)" },
+  { key: "maritalStatus", text: "What is your Marital Status?\n\n(Press 0 to cancel and return to main menu)" },
   {
     key: "spouseEducation",
-    text: "What is your Spouse's level of Education? (type N/A if not married or single)",
+    text: "What is your Spouse's level of Education? (type N/A if not married or single)\n\n(Press 0 to cancel and return to main menu)",
   },
   {
     key: "spouseProfession",
-    text: "What is your Spouse's Profession? (type N/A if not married or single)",
+    text: "What is your Spouse's Profession? (type N/A if not married or single)\n\n(Press 0 to cancel and return to main menu)",
   },
   {
     key: "relativesCanadaAustralia",
     text:
-      "Do you and/or your spouse have any relative living in Canada or Australia? If yes, please mention the exact relationship, legal status (e.g. Citizen, PR, Student), and location. If no, type 'No'.",
+      "Do you and/or your spouse have any relative living in Canada or Australia? If yes, please mention the exact relationship, legal status (e.g. Citizen, PR, Student), and location. If no, type 'No'.\n\n(Press 0 to cancel and return to main menu)",
   },
 ];
 
@@ -696,6 +696,14 @@ function startLeadFlow(session) {
 
 async function handleLeadFlow(session, userMessage, from) {
   const stepIndex = session.leadStep;
+
+  // Check if user wants to cancel
+  if (userMessage.trim() === "0" || userMessage.trim().toLowerCase() === "main menu") {
+    session.leadStep = null;
+    session.leadData = {};
+    session.menuState = "MAIN_MENU";
+    return WORKFLOW.MAIN_MENU.message;
+  }
 
   if (stepIndex !== null && stepIndex < LEAD_QUESTIONS.length) {
     const currentQuestion = LEAD_QUESTIONS[stepIndex];
@@ -718,45 +726,9 @@ async function handleLeadFlow(session, userMessage, from) {
     console.error("Error saving lead:", err.message);
   }
 
-  session.meetingState = "AWAITING_CHOICE";
-
-  return (
-    "Your information has been collected.\n\n" +
-    "Do you want to set up a 1:1 meeting with us to discuss all the details?\n\n" +
-    "1) Online Meeting\n" +
-    "2) Visit our Office\n\n" +
-    "Please reply with 1 or 2."
-  );
+  return "Your information has been collected. We will verify and soon contact you.";
 }
 
-function handleMeetingChoice(session, userMessage) {
-  const num = parseNumericOption(userMessage) || userMessage.trim().toLowerCase();
-  let reply;
-
-  if (num === "1" || num.startsWith("online")) {
-    reply =
-      "Please use this link to book an online appointment:\n" +
-      "https://calendly.com/muzamilzrk36/30min";
-  } else if (num === "2" || num.includes("office") || num.includes("visit")) {
-    reply =
-      "You are welcome to visit our office at this location:\n" +
-      "https://www.google.com/maps/search/?api=1&query=24.944782,67.057257";
-  } else {
-    return (
-      "Invalid choice.\n\n" +
-      "Please reply with:\n" +
-      "1) Online Meeting\n" +
-      "2) Visit our Office"
-    );
-  }
-
-  session.meetingState = null;
-
-  return (
-    reply +
-    '\n\nYou can type "Main Menu" to see all options again.'
-  );
-}
 
 /**
  * Core handler: strict menu + lead flow
@@ -775,7 +747,6 @@ async function handleIncomingText(from, msgBody) {
   ) {
     session.menuState = "MAIN_MENU";
     session.leadStep = null;
-    session.meetingState = null;
     return WORKFLOW.MAIN_MENU.message;
   }
 
@@ -791,11 +762,6 @@ async function handleIncomingText(from, msgBody) {
   // Lead flow
   if (session.leadStep !== null) {
     return await handleLeadFlow(session, rawText, from);
-  }
-
-  // Meeting choice
-  if (session.meetingState === "AWAITING_CHOICE") {
-    return handleMeetingChoice(session, rawText);
   }
 
   // First greeting -> main menu
