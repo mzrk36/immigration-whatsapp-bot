@@ -36,6 +36,7 @@ const INVALID_OPTION_TEXT = "Please choose a valid option from the menu.";
 
 // Dashboard Auth
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || "admin123";
+const OWNER_WHATSAPP_NUMBER = process.env.OWNER_WHATSAPP_NUMBER || ""; // e.g. "923001234567"
 
 // Load knowledge base
 let knowledgeBase = null;
@@ -741,6 +742,22 @@ async function handleLeadFlow(session, userMessage, from) {
 
 
 /**
+ * ========= OWNER NOTIFICATION =========
+ */
+async function notifyOwner(customerId) {
+  if (!OWNER_WHATSAPP_NUMBER) return;
+  const customerNumber = customerId.split("@")[0];
+  const msg = `🚨 *Human Handoff Request*\n\nCustomer *+${customerNumber}* has requested to speak with a human agent.\n\nPlease log in to your dashboard to take over the chat.`;
+  
+  try {
+    // Send message to owner asynchronously
+    await sendMessage(OWNER_WHATSAPP_NUMBER, msg);
+  } catch (err) {
+    console.error("Failed to notify owner:", err.message);
+  }
+}
+
+/**
  * Core handler: strict menu + lead flow
  */
 async function handleIncomingText(from, msgBody) {
@@ -770,6 +787,10 @@ async function handleIncomingText(from, msgBody) {
     session.chatMode = "WAITING";
     const reply = "I am transferring you to a human agent. Please hold on, someone will be with you shortly.\n\n*(Reply '0' at any time to cancel and return to the main menu)*";
     session.history.push({ from: "bot", text: reply, time: Date.now() });
+    
+    // Notify the owner in the background
+    notifyOwner(from);
+    
     return reply;
   }
 
@@ -846,6 +867,7 @@ async function handleIncomingText(from, msgBody) {
     
     if (option.type === "HUMAN_HANDOFF") {
       session.chatMode = "WAITING";
+      notifyOwner(from); // Notify owner in the background
       return "I am transferring you to a human agent. Please hold on, someone will be with you shortly.\n\n*(Reply '0' at any time to cancel and return to the main menu)*";
     }
 
