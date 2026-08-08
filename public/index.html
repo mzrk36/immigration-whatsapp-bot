@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImmiWing Agent Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="login-screen" class="screen active">
+        <div class="login-glass">
+            <div class="logo-area">
+                <i class="fa-solid fa-headset fa-3x"></i>
+                <h1>ImmiWing Handoff</h1>
+            </div>
+            <form id="login-form">
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="password-input" placeholder="Dashboard Password" required>
+                </div>
+                <button type="submit" class="primary-btn">Enter Dashboard</button>
+            </form>
+            <div id="login-error" class="hidden">Incorrect password</div>
+        </div>
+    </div>
+
+    <div id="dashboard-screen" class="screen">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fa-solid fa-globe"></i> ImmiWing</h2>
+                <button id="logout-btn"><i class="fa-solid fa-sign-out-alt"></i></button>
+            </div>
+            
+            <div class="sidebar-filters">
+                <button class="filter-btn active" data-filter="all">All Chats</button>
+                <button class="filter-btn" data-filter="WAITING">Waiting <span id="waiting-badge" class="badge hidden">0</span></button>
+            </div>
+
+            <div class="chat-list" id="chat-list">
+                <!-- Chats will be injected here -->
+            </div>
+        </aside>
+
+        <main class="chat-area">
+            <div id="empty-state" class="empty-state">
+                <i class="fa-brands fa-whatsapp fa-4x"></i>
+                <h2>Select a conversation to start messaging</h2>
+            </div>
+            
+            <div id="active-chat" class="active-chat hidden">
+                <header class="chat-header">
+                    <div class="chat-title">
+                        <h3 id="current-user-id">+1234567890</h3>
+                        <span id="current-mode-badge" class="mode-badge">AI Mode</span>
+                    </div>
+                    <div class="chat-actions">
+                        <button id="btn-takeover" class="action-btn takeover-btn hidden"><i class="fa-solid fa-user-check"></i> Take Over (Human Mode)</button>
+                        <button id="btn-return-ai" class="action-btn ai-btn hidden"><i class="fa-solid fa-robot"></i> Return to AI</button>
+                    </div>
+                </header>
+
+                <div class="messages-container" id="messages-container">
+                    <!-- Messages will be injected here -->
+                </div>
+
+                <div class="message-composer" id="message-composer">
+                    <form id="send-form">
+                        <input type="text" id="message-input" placeholder="Type a message to the customer..." autocomplete="off">
+                        <button type="submit" class="send-btn" id="send-btn" disabled><i class="fa-solid fa-paper-plane"></i></button>
+                    </form>
+                    <div id="composer-overlay" class="composer-overlay">
+                        You can only send messages when in Human Mode.
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

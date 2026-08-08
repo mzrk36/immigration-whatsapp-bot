@@ -9,6 +9,7 @@ const path = require("path");
 
 const app = express();
 app.use(bodyParser.json());
+app.use("/dashboard", express.static("public"));
 
 /**
  * ====== CONFIG ======
@@ -32,6 +33,9 @@ const GOOGLE_SHEETS_LEADS_RANGE =
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY || "";
 const MISTRAL_MODEL = process.env.MISTRAL_MODEL || "mistral-small-latest";
 const INVALID_OPTION_TEXT = "Please choose a valid option from the menu.";
+
+// Dashboard Auth
+const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || "admin123";
 
 // Load knowledge base
 let knowledgeBase = null;
@@ -646,8 +650,12 @@ function getSession(userId) {
       menuState: "MAIN_MENU",
       leadStep: null,
       leadData: {},
+      chatMode: "AI", // Can be 'AI', 'WAITING', or 'HUMAN'
+      history: [],
+      lastActive: Date.now()
     };
   }
+  sessions[userId].lastActive = Date.now();
   return sessions[userId];
 }
 
@@ -737,6 +745,29 @@ async function handleIncomingText(from, msgBody) {
   const rawText = (msgBody || "").trim();
   const lower = rawText.toLowerCase();
   const session = getSession(from);
+
+  // Store user message in history
+  session.history.push({ from: "user", text: rawText, time: Date.now() });
+  if (session.history.length > 50) session.history.shift();
+
+  // Handle human handoff triggers
+  const humanKeywords = ["human", "agent", "real person", "talk to human", "customer service"];
+  if (session.chatMode === "AI" && humanKeywords.some(kw => lower.includes(kw))) {
+    session.chatMode = "WAITING";
+    const reply = "I am transferring you to a human agent. Please hold on, someone will be with you shortly.";
+    session.history.push({ from: "bot", text: reply, time: Date.now() });
+    return reply;
+  }
+
+  // Intercept if not in AI mode
+  if (session.chatMode === "WAITING") {
+    // Already waiting, do not auto-reply
+    return null;
+  }
+  if (session.chatMode === "HUMAN") {
+    // In human mode, do not auto-reply
+    return null;
+  }
 
   // Global commands
   if (
@@ -933,6 +964,11 @@ app.post("/webhook", async (req, res) => {
     }
 
     if (replyText) {
+      // Store bot reply in history
+      const session = getSession(from);
+      session.history.push({ from: "bot", text: replyText, time: Date.now() });
+      if (session.history.length > 50) session.history.shift();
+
       try {
         await sendMessage(from, replyText);
       } catch (error) {
@@ -942,6 +978,50 @@ app.post("/webhook", async (req, res) => {
 
   } catch (error) {
     console.error("Webhook Error:", error);
+  }
+});
+
+/**
+ * ========= DASHBOARD API =========
+ */
+
+// Basic Auth Middleware
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+  const b64auth = (authHeader || "").split(" ")[1] || "";
+  const [login, password] = Buffer.from(b64auth, "base64").toString().split(":");
+  if (password === DASHBOARD_PASSWORD) {
+    return next();
+  }
+  return res.status(401).json({ error: "Unauthorized" });
+}
+
+app.get("/api/dashboard/sessions", authMiddleware, (req, res) => {
+  res.json(sessions);
+});
+
+app.post("/api/dashboard/mode", authMiddleware, (req, res) => {
+  const { userId, mode } = req.body;
+  if (!sessions[userId]) return res.status(404).json({ error: "Session not found" });
+  if (["AI", "WAITING", "HUMAN"].includes(mode)) {
+    sessions[userId].chatMode = mode;
+    res.json({ success: true, mode: sessions[userId].chatMode });
+  } else {
+    res.status(400).json({ error: "Invalid mode" });
+  }
+});
+
+app.post("/api/dashboard/send", authMiddleware, async (req, res) => {
+  const { userId, text } = req.body;
+  if (!sessions[userId]) return res.status(404).json({ error: "Session not found" });
+  
+  try {
+    await sendMessage(userId, text);
+    sessions[userId].history.push({ from: "owner", text, time: Date.now() });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
