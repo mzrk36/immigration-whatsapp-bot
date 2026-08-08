@@ -646,7 +646,26 @@ CRITICAL INSTRUCTIONS:
 /**
  * ========= SESSION / STATE =========
  */
-const sessions = {};
+const SESSIONS_FILE = path.join(__dirname, "sessions.json");
+
+let sessions = {};
+try {
+  if (fs.existsSync(SESSIONS_FILE)) {
+    const data = fs.readFileSync(SESSIONS_FILE, "utf8");
+    sessions = JSON.parse(data);
+    console.log("Loaded persistent sessions.");
+  }
+} catch (err) {
+  console.error("Error loading sessions.json:", err.message);
+}
+
+function saveSessions() {
+  try {
+    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2));
+  } catch (err) {
+    console.error("Error saving sessions:", err.message);
+  }
+}
 
 function getSession(userId) {
   if (!sessions[userId]) {
@@ -658,6 +677,7 @@ function getSession(userId) {
       history: [],
       lastActive: Date.now()
     };
+    saveSessions();
   }
   sessions[userId].lastActive = Date.now();
   return sessions[userId];
@@ -726,11 +746,13 @@ async function handleLeadFlow(session, userMessage, from) {
 
   if (session.leadStep < LEAD_QUESTIONS.length) {
     const nextQuestion = LEAD_QUESTIONS[session.leadStep];
+    saveSessions();
     return nextQuestion.text;
   }
 
   // all questions answered
   session.leadStep = null;
+  saveSessions();
 
   try {
     await saveLeadToSheet(session.leadData, from);
@@ -749,11 +771,15 @@ async function notifyOwner(customerId) {
   if (!OWNER_WHATSAPP_NUMBER) return;
   const customerNumber = customerId.split("@")[0];
   const chatLink = `${DASHBOARD_URL}?chatId=${encodeURIComponent(customerId)}`;
-  const msg = `🚨 *Human Handoff Request*\n\nCustomer *+${customerNumber}* has requested to speak with a human agent.\n\nClick here to jump directly into their chat:\n${chatLink}`;
+  const msg1 = `🚨 *Human Handoff Request*\n\nCustomer *+${customerNumber}* has requested to speak with a human agent.`;
+  const msg2 = `${chatLink}`;
   
   try {
     // Send message to owner asynchronously
-    await sendMessage(OWNER_WHATSAPP_NUMBER, msg);
+    await sendMessage(OWNER_WHATSAPP_NUMBER, msg1);
+    // Add a 1s delay to ensure WhatsApp/OpenWA doesn't batch them into one message
+    await new Promise(r => setTimeout(r, 1000));
+    await sendMessage(OWNER_WHATSAPP_NUMBER, msg2);
   } catch (err) {
     console.error("Failed to notify owner:", err.message);
   }
@@ -770,6 +796,7 @@ async function handleIncomingText(from, msgBody) {
   // Store user message in history
   session.history.push({ from: "user", text: rawText, time: Date.now() });
   if (session.history.length > 50) session.history.shift();
+  saveSessions();
 
   // If customer explicitly wants to cancel human chat and return to AI
   const isMainMenuCommand = lower === "main menu" || lower === "main manu" || lower === "menu" || lower === "0";
@@ -780,6 +807,7 @@ async function handleIncomingText(from, msgBody) {
     session.leadStep = null;
     const reply = "You have ended the chat with the human agent. Switching back to AI Mode.\n\n" + WORKFLOW.MAIN_MENU.message;
     session.history.push({ from: "bot", text: reply, time: Date.now() });
+    saveSessions();
     return reply;
   }
 
@@ -789,6 +817,7 @@ async function handleIncomingText(from, msgBody) {
     session.chatMode = "WAITING";
     const reply = "I am transferring you to a human agent. Please hold on, someone will be with you shortly.\n\n*(Reply '0' at any time to cancel and return to the main menu)*";
     session.history.push({ from: "bot", text: reply, time: Date.now() });
+    saveSessions();
     
     // Notify the owner in the background
     notifyOwner(from);
@@ -810,6 +839,7 @@ async function handleIncomingText(from, msgBody) {
   if (isMainMenuCommand) {
     session.menuState = "MAIN_MENU";
     session.leadStep = null;
+    saveSessions();
     return WORKFLOW.MAIN_MENU.message;
   }
 
@@ -854,21 +884,25 @@ async function handleIncomingText(from, msgBody) {
 
     if (option.type === "STATE") {
       session.menuState = option.next;
+      saveSessions();
       return WORKFLOW[option.next].message;
     }
 
     if (option.type === "MAIN") {
       session.menuState = "MAIN_MENU";
+      saveSessions();
       return WORKFLOW.MAIN_MENU.message;
     }
 
     if (option.type === "APPLY") {
       startLeadFlow(session);
+      saveSessions();
       return "Great! Let's start your application.\n\n" + LEAD_QUESTIONS[0].text;
     }
     
     if (option.type === "HUMAN_HANDOFF") {
       session.chatMode = "WAITING";
+      saveSessions();
       notifyOwner(from); // Notify owner in the background
       return "I am transferring you to a human agent. Please hold on, someone will be with you shortly.\n\n*(Reply '0' at any time to cancel and return to the main menu)*";
     }
@@ -887,6 +921,7 @@ async function handleIncomingText(from, msgBody) {
   
   if (wantsToApply) {
     startLeadFlow(session);
+    saveSessions();
     return "Great! Let's start your application.\n\n" + LEAD_QUESTIONS[0].text;
   }
   
@@ -1006,6 +1041,7 @@ app.post("/webhook", async (req, res) => {
       const session = getSession(from);
       session.history.push({ from: "bot", text: replyText, time: Date.now() });
       if (session.history.length > 50) session.history.shift();
+      saveSessions();
 
       try {
         await sendMessage(from, replyText);
@@ -1044,6 +1080,7 @@ app.post("/api/dashboard/mode", authMiddleware, (req, res) => {
   if (!sessions[userId]) return res.status(404).json({ error: "Session not found" });
   if (["AI", "WAITING", "HUMAN"].includes(mode)) {
     sessions[userId].chatMode = mode;
+    saveSessions();
     res.json({ success: true, mode: sessions[userId].chatMode });
   } else {
     res.status(400).json({ error: "Invalid mode" });
@@ -1057,6 +1094,8 @@ app.post("/api/dashboard/send", authMiddleware, async (req, res) => {
   try {
     await sendMessage(userId, text);
     sessions[userId].history.push({ from: "owner", text, time: Date.now() });
+    if (sessions[userId].history.length > 50) sessions[userId].history.shift();
+    saveSessions();
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
