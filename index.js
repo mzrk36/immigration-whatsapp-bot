@@ -772,7 +772,7 @@ async function notifyOwner(customerId) {
   const customerNumber = customerId.split("@")[0];
   const chatLink = `${DASHBOARD_URL}?chatId=${customerNumber}`;
   const msg1 = `🚨 *Human Handoff Request*\n\nCustomer *+${customerNumber}* has requested to speak with a human agent.`;
-  const msg2 = `🔗 Click to open chat:\n${chatLink}`;
+  const msg2 = `${chatLink}`;
   
   // Send first message immediately
   sendMessage(OWNER_WHATSAPP_NUMBER, msg1).catch(err => console.error("Msg1 failed:", err.message));
