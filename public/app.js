@@ -99,8 +99,9 @@ async function fetchSessions() {
         
         // Auto-select chat from URL parameter on initial load
         const urlParams = new URLSearchParams(window.location.search);
-        const paramChatId = urlParams.get('chatId');
-        if (paramChatId && !currentUserId) {
+        const paramChatIdRaw = urlParams.get('chatId');
+        if (paramChatIdRaw && !currentUserId) {
+            const paramChatId = paramChatIdRaw.includes('@') ? paramChatIdRaw : paramChatIdRaw + '@c.us';
             if (sessions[paramChatId]) {
                 currentUserId = paramChatId;
                 window.history.replaceState({}, document.title, window.location.pathname);

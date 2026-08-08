@@ -770,19 +770,17 @@ async function handleLeadFlow(session, userMessage, from) {
 async function notifyOwner(customerId) {
   if (!OWNER_WHATSAPP_NUMBER) return;
   const customerNumber = customerId.split("@")[0];
-  const chatLink = `${DASHBOARD_URL}?chatId=${encodeURIComponent(customerId)}`;
+  const chatLink = `${DASHBOARD_URL}?chatId=${customerNumber}`;
   const msg1 = `🚨 *Human Handoff Request*\n\nCustomer *+${customerNumber}* has requested to speak with a human agent.`;
-  const msg2 = `🔗 Click the link below to jump directly into the chat:\n${chatLink}`;
+  const msg2 = `🔗 Click to open chat:\n${chatLink}`;
   
-  try {
-    // Send message to owner asynchronously
-    await sendMessage(OWNER_WHATSAPP_NUMBER, msg1);
-    // Add a robust 3-second delay so OpenWA does not drop or batch the second message
-    await new Promise(r => setTimeout(r, 3000));
-    await sendMessage(OWNER_WHATSAPP_NUMBER, msg2);
-  } catch (err) {
-    console.error("Failed to notify owner:", err.message);
-  }
+  // Send first message immediately
+  sendMessage(OWNER_WHATSAPP_NUMBER, msg1).catch(err => console.error("Msg1 failed:", err.message));
+  
+  // Send the link separately after 4 seconds to guarantee it doesn't get batched or dropped
+  setTimeout(() => {
+    sendMessage(OWNER_WHATSAPP_NUMBER, msg2).catch(err => console.error("Msg2 failed:", err.message));
+  }, 4000);
 }
 
 /**
