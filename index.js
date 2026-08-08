@@ -906,6 +906,8 @@ app.get("/webhook", (req, res) => {
   res.send("OpenWA webhook endpoint is active");
 });
 
+const processedMessageIds = [];
+
 app.post("/webhook", async (req, res) => {
   // Acknowledge immediately to prevent webhook retries from OpenWA
   res.sendStatus(200);
@@ -921,6 +923,19 @@ app.post("/webhook", async (req, res) => {
 
     const from = messageData.from || messageData.chatId;
     const msgBody = messageData.body || messageData.text || "";
+    
+    // Deduplication logic to prevent double processing of the same message
+    const messageId = messageData.id || messageData._id || payload.id;
+    if (messageId) {
+      if (processedMessageIds.includes(messageId)) {
+        console.log("Duplicate webhook received for message ID:", messageId, "- Ignoring.");
+        return;
+      }
+      processedMessageIds.push(messageId);
+      if (processedMessageIds.length > 500) {
+        processedMessageIds.shift(); // Keep memory usage low
+      }
+    }
 
     if (!from || !msgBody) {
       console.log("Invalid OpenWA message payload:", payload);
