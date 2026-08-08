@@ -772,13 +772,13 @@ async function notifyOwner(customerId) {
   const customerNumber = customerId.split("@")[0];
   const chatLink = `${DASHBOARD_URL}?chatId=${encodeURIComponent(customerId)}`;
   const msg1 = `🚨 *Human Handoff Request*\n\nCustomer *+${customerNumber}* has requested to speak with a human agent.`;
-  const msg2 = `${chatLink}`;
+  const msg2 = `🔗 Click the link below to jump directly into the chat:\n${chatLink}`;
   
   try {
     // Send message to owner asynchronously
     await sendMessage(OWNER_WHATSAPP_NUMBER, msg1);
-    // Add a 1s delay to ensure WhatsApp/OpenWA doesn't batch them into one message
-    await new Promise(r => setTimeout(r, 1000));
+    // Add a robust 3-second delay so OpenWA does not drop or batch the second message
+    await new Promise(r => setTimeout(r, 3000));
     await sendMessage(OWNER_WHATSAPP_NUMBER, msg2);
   } catch (err) {
     console.error("Failed to notify owner:", err.message);
