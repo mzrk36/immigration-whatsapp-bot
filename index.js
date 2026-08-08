@@ -37,6 +37,7 @@ const INVALID_OPTION_TEXT = "Please choose a valid option from the menu.";
 // Dashboard Auth
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || "admin123";
 const OWNER_WHATSAPP_NUMBER = process.env.OWNER_WHATSAPP_NUMBER || ""; // e.g. "923001234567"
+const DASHBOARD_URL = process.env.DASHBOARD_URL || "http://157.230.237.206:3000/dashboard";
 
 // Load knowledge base
 let knowledgeBase = null;
@@ -747,7 +748,8 @@ async function handleLeadFlow(session, userMessage, from) {
 async function notifyOwner(customerId) {
   if (!OWNER_WHATSAPP_NUMBER) return;
   const customerNumber = customerId.split("@")[0];
-  const msg = `🚨 *Human Handoff Request*\n\nCustomer *+${customerNumber}* has requested to speak with a human agent.\n\nPlease log in to your dashboard to take over the chat.`;
+  const chatLink = `${DASHBOARD_URL}?chatId=${encodeURIComponent(customerId)}`;
+  const msg = `🚨 *Human Handoff Request*\n\nCustomer *+${customerNumber}* has requested to speak with a human agent.\n\nClick here to jump directly into their chat:\n${chatLink}`;
   
   try {
     // Send message to owner asynchronously

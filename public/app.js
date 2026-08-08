@@ -93,6 +93,17 @@ async function fetchSessions() {
         const sessions = await res.json();
         window.lastSessions = sessions;
         updateWaitingBadge(sessions);
+        
+        // Auto-select chat from URL parameter on initial load
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramChatId = urlParams.get('chatId');
+        if (paramChatId && !currentUserId) {
+            if (sessions[paramChatId]) {
+                currentUserId = paramChatId;
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
         renderChats(sessions);
         if (currentUserId && sessions[currentUserId]) {
             renderActiveChat(currentUserId, sessions[currentUserId]);
