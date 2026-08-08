@@ -907,11 +907,14 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
+  // Acknowledge immediately to prevent webhook retries from OpenWA
+  res.sendStatus(200);
+
   try {
     const payload = req.body;
 
     if (payload.event !== "message.received") {
-      return res.sendStatus(200);
+      return;
     }
 
     const messageData = payload.data || {};
@@ -921,39 +924,34 @@ app.post("/webhook", async (req, res) => {
 
     if (!from || !msgBody) {
       console.log("Invalid OpenWA message payload:", payload);
-      return res.sendStatus(200);
+      return;
     }
 
     if (messageData.isGroup) {
-      return res.sendStatus(200);
+      return;
     }
 
     console.log("Message from:", from);
     console.log("User said:", msgBody);
 
+    let replyText;
     try {
-      const replyText = await handleIncomingText(from, msgBody);
-
-      if (replyText) {
-        await sendMessage(from, replyText);
-      }
+      replyText = await handleIncomingText(from, msgBody);
     } catch (error) {
-      console.error("Error handling message:", error.message);
+      console.error("Error handling incoming text:", error.message);
+      replyText = "I'm currently experiencing technical difficulties. Please try again later or contact ImmiWing directly.";
+    }
 
+    if (replyText) {
       try {
-        await sendMessage(
-          from,
-          "I'm currently experiencing technical difficulties. Please try again later or contact ImmiWing directly."
-        );
-      } catch (openwaError) {
-        console.error("Failed to send fallback message:", openwaError.message);
+        await sendMessage(from, replyText);
+      } catch (error) {
+        console.error("Error sending message:", error.message);
       }
     }
 
-    res.sendStatus(200);
   } catch (error) {
     console.error("Webhook Error:", error);
-    res.sendStatus(500);
   }
 });
 
