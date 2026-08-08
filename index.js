@@ -781,73 +781,47 @@ async function handleIncomingText(from, msgBody) {
 
   const optionNumber = parseNumericOption(rawText);
 
-  if (!optionNumber) {
-    // No numeric option found - check if user wants to apply
-    const wantsToApply = lower.includes("apply") || 
-                        lower.includes("application") || 
-                        lower.includes("want to apply") ||
-                        lower.includes("start application") ||
-                        lower.includes("begin application");
-    
-    if (wantsToApply) {
-      // User wants to apply - trigger lead flow
+  // STRICT AI RULE: If user typed a number, they are trying to use the menu.
+  // If the number is invalid, tell them it's invalid. Do NOT trigger AI.
+  if (optionNumber) {
+    const option = node.options[optionNumber];
+    if (!option) {
+      return INVALID_OPTION_TEXT;
+    }
+
+    if (option.type === "STATE") {
+      session.menuState = option.next;
+      return WORKFLOW[option.next].message;
+    }
+
+    if (option.type === "MAIN") {
+      session.menuState = "MAIN_MENU";
+      return WORKFLOW.MAIN_MENU.message;
+    }
+
+    if (option.type === "APPLY") {
       startLeadFlow(session);
       return "Great! Let's start your application.\n\n" + LEAD_QUESTIONS[0].text;
     }
-    
-    // Try Mistral AI fallback with session context
-    const mistralResponse = await getMistralResponse(rawText, session);
-    if (mistralResponse) {
-      return mistralResponse;
+
+    if (option.type === "LOOP") {
+      return node.message;
     }
-    return INVALID_OPTION_TEXT;
   }
 
-  const option = node.options[optionNumber];
-
-  if (!option) {
-    // Invalid option number - check if user wants to apply
-    const wantsToApply = lower.includes("apply") || 
-                        lower.includes("application") || 
-                        lower.includes("want to apply") ||
-                        lower.includes("start application") ||
-                        lower.includes("begin application");
-    
-    if (wantsToApply) {
-      // User wants to apply - trigger lead flow
-      startLeadFlow(session);
-      return "Great! Let's start your application.\n\n" + LEAD_QUESTIONS[0].text;
-    }
-    
-    // Try Mistral AI fallback with session context
-    const mistralResponse = await getMistralResponse(rawText, session);
-    if (mistralResponse) {
-      return mistralResponse;
-    }
-    return INVALID_OPTION_TEXT;
-  }
-
-  if (option.type === "STATE") {
-    session.menuState = option.next;
-    return WORKFLOW[option.next].message;
-  }
-
-  if (option.type === "MAIN") {
-    session.menuState = "MAIN_MENU";
-    return WORKFLOW.MAIN_MENU.message;
-  }
-
-  if (option.type === "APPLY") {
+  // If it's NOT a number, then we check for apply keywords or trigger AI fallback
+  const wantsToApply = lower.includes("apply") || 
+                      lower.includes("application") || 
+                      lower.includes("want to apply") ||
+                      lower.includes("start application") ||
+                      lower.includes("begin application");
+  
+  if (wantsToApply) {
     startLeadFlow(session);
     return "Great! Let's start your application.\n\n" + LEAD_QUESTIONS[0].text;
   }
-
-  if (option.type === "LOOP") {
-    // stay in same node
-    return node.message;
-  }
-
-  // Final fallback - try Mistral AI with session context
+  
+  // Final fallback - try Mistral AI with session context ONLY for text/questions
   const mistralResponse = await getMistralResponse(rawText, session);
   if (mistralResponse) {
     return mistralResponse;
@@ -906,7 +880,7 @@ app.get("/webhook", (req, res) => {
   res.send("OpenWA webhook endpoint is active");
 });
 
-const processedMessageIds = [];
+const userLastMessage = {};
 
 app.post("/webhook", async (req, res) => {
   // Acknowledge immediately to prevent webhook retries from OpenWA
@@ -924,17 +898,18 @@ app.post("/webhook", async (req, res) => {
     const from = messageData.from || messageData.chatId;
     const msgBody = messageData.body || messageData.text || "";
     
-    // Deduplication logic to prevent double processing of the same message
-    const messageId = messageData.id || messageData._id || payload.id;
-    if (messageId) {
-      if (processedMessageIds.includes(messageId)) {
-        console.log("Duplicate webhook received for message ID:", messageId, "- Ignoring.");
+    // BULLETPROOF DEDUPLICATION: Lock based on user and time to prevent double-processing race conditions
+    if (from) {
+      const now = Date.now();
+      const lastMsg = userLastMessage[from];
+      
+      // If the same user sends the exact same message within 2 seconds, ignore it!
+      if (lastMsg && lastMsg.text === msgBody && (now - lastMsg.time) < 2000) {
+        console.log("Ignored duplicate webhook from", from, "within 2 seconds.");
         return;
       }
-      processedMessageIds.push(messageId);
-      if (processedMessageIds.length > 500) {
-        processedMessageIds.shift(); // Keep memory usage low
-      }
+      
+      userLastMessage[from] = { text: msgBody, time: now };
     }
 
     if (!from || !msgBody) {
