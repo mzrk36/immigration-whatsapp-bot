@@ -403,3 +403,51 @@ body {
     backdrop-filter: blur(4px);
     z-index: 10;
 }
+
+/* MOBILE LAYOUT */
+.back-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    cursor: pointer;
+    margin-right: 1rem;
+}
+
+@media (max-width: 768px) {
+    #dashboard-screen {
+        flex-direction: column;
+    }
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+    }
+    .sidebar.hidden-mobile {
+        display: none !important;
+    }
+    .chat-area.hidden-mobile {
+        display: none !important;
+    }
+    .back-btn {
+        display: inline-block;
+    }
+    .login-glass {
+        padding: 2rem;
+        margin: 1rem;
+    }
+    .message {
+        max-width: 90%;
+    }
+    #message-input {
+        padding: 0.75rem;
+    }
+    .action-btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.75rem;
+    }
+    .chat-title h3 {
+        font-size: 1rem;
+    }
+}

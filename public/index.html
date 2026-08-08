@@ -27,7 +27,7 @@
     </div>
 
     <div id="dashboard-screen" class="screen">
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h2><i class="fa-solid fa-globe"></i> ImmiWing</h2>
                 <button id="logout-btn"><i class="fa-solid fa-sign-out-alt"></i></button>
@@ -43,7 +43,7 @@
             </div>
         </aside>
 
-        <main class="chat-area">
+        <main class="chat-area hidden-mobile" id="chat-area">
             <div id="empty-state" class="empty-state">
                 <i class="fa-brands fa-whatsapp fa-4x"></i>
                 <h2>Select a conversation to start messaging</h2>
@@ -52,6 +52,7 @@
             <div id="active-chat" class="active-chat hidden">
                 <header class="chat-header">
                     <div class="chat-title">
+                        <button id="btn-back" class="back-btn"><i class="fa-solid fa-arrow-left"></i></button>
                         <h3 id="current-user-id">+1234567890</h3>
                         <span id="current-mode-badge" class="mode-badge">AI Mode</span>
                     </div>

@@ -23,6 +23,9 @@ const messagesContainer = document.getElementById('messages-container');
 
 const btnTakeover = document.getElementById('btn-takeover');
 const btnReturnAi = document.getElementById('btn-return-ai');
+const btnBack = document.getElementById('btn-back');
+const sidebar = document.getElementById('sidebar');
+const chatArea = document.getElementById('chat-area');
 const sendForm = document.getElementById('send-form');
 const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
@@ -201,6 +204,12 @@ function renderActiveChat(uid, session) {
         messagesContainer.appendChild(div);
     });
 
+    // Mobile layout: Hide sidebar, show chat
+    if (window.innerWidth <= 768) {
+        sidebar.classList.add('hidden-mobile');
+        chatArea.classList.remove('hidden-mobile');
+    }
+
     // Auto scroll to bottom only if user hasn't scrolled up
     const isScrolledToBottom = messagesContainer.scrollHeight - messagesContainer.clientHeight <= messagesContainer.scrollTop + 50;
     if (isScrolledToBottom || !window.lastScrollTop) {
@@ -208,6 +217,19 @@ function renderActiveChat(uid, session) {
     }
     window.lastScrollTop = messagesContainer.scrollTop;
 }
+
+// Mobile Back Button
+btnBack.addEventListener('click', () => {
+    sidebar.classList.remove('hidden-mobile');
+    chatArea.classList.add('hidden-mobile');
+    currentUserId = null;
+    
+    // Clear URL param if present
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('chatId')) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+});
 
 // Mode Switching
 async function changeMode(mode) {
@@ -238,6 +260,13 @@ sendForm.addEventListener('submit', async (e) => {
     const text = messageInput.value.trim();
     messageInput.value = '';
     
+    // Optimistic UI Update so owner sees the message instantly
+    if (window.lastSessions && window.lastSessions[currentUserId]) {
+        window.lastSessions[currentUserId].history.push({ from: "owner", text, time: Date.now() });
+        renderActiveChat(currentUserId, window.lastSessions[currentUserId]);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Force scroll
+    }
+
     try {
         await fetch('/api/dashboard/send', {
             method: 'POST',
@@ -247,7 +276,7 @@ sendForm.addEventListener('submit', async (e) => {
             },
             body: JSON.stringify({ userId: currentUserId, text })
         });
-        fetchSessions(); // update immediately
+        fetchSessions(); // update immediately to sync with server
     } catch (e) {
         alert('Failed to send message');
     }
