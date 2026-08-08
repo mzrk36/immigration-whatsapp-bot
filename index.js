@@ -61,7 +61,8 @@ Please type the number of the option that best matches your interest:
 3️⃣ Direct Citizenship Programs
 4️⃣ Investor’s Immigration
 5️⃣ Student Visa (All Countries)
-6️⃣ Other Visa Services`;
+6️⃣ Other Visa Services
+7️⃣ Talk to a Human Agent`;
 
 const SKILLED_IMMIGRATION_TEXT = `--------------------------------------
 1️⃣ Skilled Immigration
@@ -296,6 +297,7 @@ const WORKFLOW = {
       "4": { type: "STATE", next: "INVESTOR" },
       "5": { type: "STATE", next: "STUDENT" },
       "6": { type: "STATE", next: "OTHER_VISA" },
+      "7": { type: "HUMAN_HANDOFF" },
     },
   },
 
@@ -750,11 +752,23 @@ async function handleIncomingText(from, msgBody) {
   session.history.push({ from: "user", text: rawText, time: Date.now() });
   if (session.history.length > 50) session.history.shift();
 
-  // Handle human handoff triggers
+  // If customer explicitly wants to cancel human chat and return to AI
+  const isMainMenuCommand = lower === "main menu" || lower === "main manu" || lower === "menu" || lower === "0";
+  
+  if (isMainMenuCommand && session.chatMode !== "AI") {
+    session.chatMode = "AI";
+    session.menuState = "MAIN_MENU";
+    session.leadStep = null;
+    const reply = "You have ended the chat with the human agent. Switching back to AI Mode.\n\n" + WORKFLOW.MAIN_MENU.message;
+    session.history.push({ from: "bot", text: reply, time: Date.now() });
+    return reply;
+  }
+
+  // Handle human handoff triggers from keywords
   const humanKeywords = ["human", "agent", "real person", "talk to human", "customer service"];
   if (session.chatMode === "AI" && humanKeywords.some(kw => lower.includes(kw))) {
     session.chatMode = "WAITING";
-    const reply = "I am transferring you to a human agent. Please hold on, someone will be with you shortly.";
+    const reply = "I am transferring you to a human agent. Please hold on, someone will be with you shortly.\n\n*(Reply '0' at any time to cancel and return to the main menu)*";
     session.history.push({ from: "bot", text: reply, time: Date.now() });
     return reply;
   }
@@ -770,12 +784,7 @@ async function handleIncomingText(from, msgBody) {
   }
 
   // Global commands
-  if (
-    lower === "main menu" ||
-    lower === "main manu" ||
-    lower === "menu" ||
-    lower === "0"
-  ) {
+  if (isMainMenuCommand) {
     session.menuState = "MAIN_MENU";
     session.leadStep = null;
     return WORKFLOW.MAIN_MENU.message;
@@ -833,6 +842,11 @@ async function handleIncomingText(from, msgBody) {
     if (option.type === "APPLY") {
       startLeadFlow(session);
       return "Great! Let's start your application.\n\n" + LEAD_QUESTIONS[0].text;
+    }
+    
+    if (option.type === "HUMAN_HANDOFF") {
+      session.chatMode = "WAITING";
+      return "I am transferring you to a human agent. Please hold on, someone will be with you shortly.\n\n*(Reply '0' at any time to cancel and return to the main menu)*";
     }
 
     if (option.type === "LOOP") {
