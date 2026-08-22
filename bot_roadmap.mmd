@@ -1,0 +1,75 @@
+graph TD
+    %% Main Entities
+    User([User WhatsApp]) 
+    OpenWA[OpenWA API Server]
+    Webhook[Node.js Express /webhook]
+    Dashboard([Owner Control Dashboard])
+    Mistral[Mistral AI Engine]
+    GoogleSheets[(Google Sheets Leads)]
+    DB[(sessions.json Database)]
+
+    %% Connections from User
+    User -->|Sends Message| OpenWA
+    OpenWA -->|POST Request| Webhook
+
+    %% Processing Layer
+    Webhook --> Deduplication{2-Second Deduplication Lock}
+    Deduplication -->|Duplicate Message| Drop[Ignore Message]
+    Deduplication -->|Unique Message| StateCheck{Check Current Chat Mode}
+    StateCheck -.Reads from.-> DB
+
+    %% Mode Branches
+    StateCheck -->|Mode: WAITING| InterceptWaiting[Intercept: Do Not Auto-Reply]
+    StateCheck -->|Mode: HUMAN| InterceptHuman[Intercept: Do Not Auto-Reply]
+    StateCheck -->|Mode: AI| CommandCheck{Check User Command}
+
+    %% AI Mode Commands
+    CommandCheck -->|Sends '0' or 'Main Menu'| ResetState[Reset Session to MAIN_MENU]
+    CommandCheck -->|Handoff Keyword / Menu Option 7| SetWaiting[Set Mode to WAITING]
+    
+    %% Handoff Flow
+    SetWaiting --> NotifyOwner1[Send WhatsApp Alert to Owner]
+    SetWaiting --> NotifyOwner2[Send Direct Dashboard Link]
+    
+    %% Business Logic
+    CommandCheck -->|Other Inputs| FlowCheck{Check Current Flow State}
+    FlowCheck -->|In Lead Form| LeadForm[Ask Next Application Question]
+    LeadForm -->|Form Complete| GoogleSheets
+    
+    FlowCheck -->|In Navigation Menu| NumericCheck{Is Input a Number?}
+    
+    %% Menu Navigation
+    NumericCheck -->|Valid Number| Navigate[Navigate to Sub-Menu]
+    Navigate -->|Option: Apply| LeadForm
+    
+    %% AI Fallback
+    NumericCheck -->|Not a Number| MistralAI[Trigger AI Fallback]
+    MistralAI -->|Context + Knowledge.json| Mistral
+    Mistral --> GenerateReply[Generate Friendly AI Response]
+
+    %% Dashboard Controls
+    Dashboard -->|View Live Chats| DashAPI[Dashboard Express API]
+    DashAPI -.Reads.-> DB
+    Dashboard -->|Toggle Mode AI/HUMAN| UpdateState[Update Chat Mode]
+    UpdateState -.Writes.-> DB
+    Dashboard -->|Send Reply| SendMsg[Send Text]
+    SendMsg --> OpenWA
+    
+    %% Outputs
+    GenerateReply --> SendFinal[Send Text]
+    Navigate --> SendFinal
+    ResetState --> SendFinal
+    LeadForm --> SendFinal
+    SendFinal --> OpenWA
+    OpenWA -->|Delivers Message| User
+
+    %% Styling
+    classDef external fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef process fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef logic fill:#fbf,stroke:#333,stroke-width:2px;
+    classDef database fill:#ffb,stroke:#333,stroke-width:2px;
+
+    class User,Owner,GoogleSheets,Mistral external;
+    class Webhook,Dashboard,OpenWA process;
+    class Deduplication,StateCheck,CommandCheck,FlowCheck,NumericCheck logic;
+    class DB database;

@@ -27,7 +27,7 @@ const GOOGLE_SHEETS_PRIVATE_KEY = (process.env.GOOGLE_SHEETS_PRIVATE_KEY || "---
 const GOOGLE_SHEETS_SPREADSHEET_ID =
   process.env.GOOGLE_SHEETS_SPREADSHEET_ID || "1nn075Y29hoByPPD1hQnem2zJbE-Qm88qskU1zDBjq2U";
 const GOOGLE_SHEETS_LEADS_RANGE =
-  process.env.GOOGLE_SHEETS_LEADS_RANGE || "Leads!A2:M";
+  process.env.GOOGLE_SHEETS_LEADS_RANGE || "Leads!A2:Z";
 
 // Mistral AI Configuration
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY || "";
@@ -54,17 +54,23 @@ try {
  * ========= WORKFLOW TEXTS (EXACT) =========
  */
 
-const MAIN_MENU_TEXT = `0️⃣ Main Menu
+function getMainMenuText() {
+  let text = `0️⃣ Main Menu
 
-Welcome to ImmiWing! Your trusted partner for global immigration and visa services.
+Welcome to ImmiWings! Your trusted partner for global immigration and visa services.
 Please type the number of the option that best matches your interest:
 1️⃣ Skilled Immigration
 2️⃣ Business Immigration
 3️⃣ Direct Citizenship Programs
 4️⃣ Investor’s Immigration
 5️⃣ Student Visa (All Countries)
-6️⃣ Other Visa Services
-7️⃣ Talk to a Human Agent`;
+6️⃣ Other Visa Services`;
+
+  if (botSettings.humanHandoffEnabled) {
+    text += `\n7️⃣ Talk to a Human Agent`;
+  }
+  return text;
+}
 
 const SKILLED_IMMIGRATION_TEXT = `--------------------------------------
 1️⃣ Skilled Immigration
@@ -291,7 +297,9 @@ Type the number to continue:
 
 const WORKFLOW = {
   MAIN_MENU: {
-    message: MAIN_MENU_TEXT,
+    get message() {
+      return getMainMenuText();
+    },
     options: {
       "1": { type: "STATE", next: "SKILLED" },
       "2": { type: "STATE", next: "BUSINESS" },
@@ -504,13 +512,15 @@ async function saveLeadToSheet(lead, whatsappNumber) {
     lead.phone || "",
     lead.dob || "",
     lead.countryCity || "",
-    lead.highestEducation || "",
     lead.yearsOfEducation || "",
     lead.workExperience || "",
     lead.maritalStatus || "",
     lead.spouseEducation || "",
     lead.spouseProfession || "",
+    lead.currentOccupation || "",
+    lead.highestEducation || "",
     lead.relativesCanadaAustralia || "",
+    lead.additionalInfo || "",
   ];
 
   try {
@@ -546,7 +556,7 @@ async function getMistralResponse(userQuestion, session) {
   // Get current menu state and available options
   const currentState = session.menuState || "MAIN_MENU";
   const currentNode = WORKFLOW[currentState];
-  const currentMenuText = currentNode ? currentNode.message : MAIN_MENU_TEXT;
+  const currentMenuText = currentNode ? currentNode.message : getMainMenuText();
   
   // Build workflow structure info
   const workflowInfo = `
@@ -567,11 +577,11 @@ WORKFLOW STRUCTURE:
 - "I Want to Apply" or "Apply" triggers lead collection form
 - "Main Menu" or "0" returns to main menu at any time
 - During lead collection, typing "0" cancels the form and returns to main menu
-- Lead collection asks: Full Name, Phone, DOB, Current Country and City, Highest Education, Total Years of Education, Total Work Experience, Marital Status, Spouse Education, Spouse Profession, Relatives in Canada/Australia
+- Lead collection asks: Full Name, Phone, DOB, Current Country and City, Total Years of Education, Total Work Experience, Marital Status, Spouse Education, Spouse Profession, Current Occupation/Designation, Highest Education, Relatives in Canada/Australia, Additional Information
 - After lead collection, user receives confirmation message`;
 
   // Build context from knowledge base
-  const systemPrompt = `You are a friendly and intelligent customer service assistant for ImmiWing, an immigration and visa consulting firm. You are conversational, helpful, and work WITH the existing menu workflow system.
+  const systemPrompt = `You are a friendly and intelligent customer service assistant for ImmiWings, an immigration and visa consulting firm. You are conversational, helpful, and work WITH the existing menu workflow system.
 
 COMPANY INFORMATION:
 ${JSON.stringify(knowledgeBase.company_overview, null, 2)}
@@ -644,8 +654,31 @@ CRITICAL INSTRUCTIONS:
 }
 
 /**
- * ========= SESSION / STATE =========
+ * ========= SETTINGS / SESSION / STATE =========
  */
+const SETTINGS_FILE = path.join(__dirname, "settings.json");
+let botSettings = {
+  humanHandoffEnabled: true
+};
+
+try {
+  if (fs.existsSync(SETTINGS_FILE)) {
+    const data = fs.readFileSync(SETTINGS_FILE, "utf8");
+    botSettings = { ...botSettings, ...JSON.parse(data) };
+    console.log("Loaded persistent settings:", botSettings);
+  }
+} catch (err) {
+  console.error("Error loading settings.json:", err.message);
+}
+
+function saveSettings() {
+  try {
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(botSettings, null, 2));
+  } catch (err) {
+    console.error("Error saving settings:", err.message);
+  }
+}
+
 const SESSIONS_FILE = path.join(__dirname, "sessions.json");
 
 let sessions = {};
@@ -702,7 +735,6 @@ const LEAD_QUESTIONS = [
   { key: "phone", text: "Please share your Phone Number:\n\n(Press 0 to cancel and return to main menu)" },
   { key: "dob", text: "Please share your Date of Birth (DD-MM-YYYY):\n\n(Press 0 to cancel and return to main menu)" },
   { key: "countryCity", text: "Please share your current Country and City of residence:\n\n(Press 0 to cancel and return to main menu)" },
-  { key: "highestEducation", text: "What is your highest level of Education? (e.g. Bachelors, Masters, PhD)\n\n(Press 0 to cancel and return to main menu)" },
   { key: "yearsOfEducation", text: "How many years of education do you have in total? (e.g. 14, 16, 18 years)\n\n(Press 0 to cancel and return to main menu)" },
   { key: "workExperience", text: "How many years of total work experience do you have?\n\n(Press 0 to cancel and return to main menu)" },
   { key: "maritalStatus", text: "What is your Marital Status?\n\n(Press 0 to cancel and return to main menu)" },
@@ -715,9 +747,21 @@ const LEAD_QUESTIONS = [
     text: "What is your Spouse's Profession? (type N/A if not married or single)\n\n(Press 0 to cancel and return to main menu)",
   },
   {
+    key: "currentOccupation",
+    text: "What is your Current Occupation / Designation?\n\n(Press 0 to cancel and return to main menu)",
+  },
+  {
+    key: "highestEducation",
+    text: "What is your highest level of Education? (e.g. Bachelors, Masters, PhD, Professional degree)\n\n(Press 0 to cancel and return to main menu)",
+  },
+  {
     key: "relativesCanadaAustralia",
     text:
       "Do you and/or your spouse have any relative living in Canada or Australia? If yes, please mention the exact relationship, legal status (e.g. Citizen, PR, Student), and location. If no, type 'No'.\n\n(Press 0 to cancel and return to main menu)",
+  },
+  {
+    key: "additionalInfo",
+    text: "Anything else you want to share?\n\n(Press 0 to cancel and return to main menu)",
   },
 ];
 
@@ -811,7 +855,7 @@ async function handleIncomingText(from, msgBody) {
 
   // Handle human handoff triggers from keywords
   const humanKeywords = ["human", "agent", "real person", "talk to human", "customer service"];
-  if (session.chatMode === "AI" && humanKeywords.some(kw => lower.includes(kw))) {
+  if (botSettings.humanHandoffEnabled && session.chatMode === "AI" && humanKeywords.some(kw => lower.includes(kw))) {
     session.chatMode = "WAITING";
     const reply = "I am transferring you to a human agent. Please hold on, someone will be with you shortly.\n\n*(Reply '0' at any time to cancel and return to the main menu)*";
     session.history.push({ from: "bot", text: reply, time: Date.now() });
@@ -899,6 +943,9 @@ async function handleIncomingText(from, msgBody) {
     }
     
     if (option.type === "HUMAN_HANDOFF") {
+      if (!botSettings.humanHandoffEnabled) {
+        return INVALID_OPTION_TEXT;
+      }
       session.chatMode = "WAITING";
       saveSessions();
       notifyOwner(from); // Notify owner in the background
@@ -1031,7 +1078,7 @@ app.post("/webhook", async (req, res) => {
       replyText = await handleIncomingText(from, msgBody);
     } catch (error) {
       console.error("Error handling incoming text:", error.message);
-      replyText = "I'm currently experiencing technical difficulties. Please try again later or contact ImmiWing directly.";
+      replyText = "I'm currently experiencing technical difficulties. Please try again later or contact ImmiWings directly.";
     }
 
     if (replyText) {
@@ -1071,6 +1118,22 @@ function authMiddleware(req, res, next) {
 
 app.get("/api/dashboard/sessions", authMiddleware, (req, res) => {
   res.json(sessions);
+});
+
+app.get("/api/dashboard/settings", authMiddleware, (req, res) => {
+  res.json(botSettings);
+});
+
+app.post("/api/dashboard/settings", authMiddleware, (req, res) => {
+  const { humanHandoffEnabled } = req.body;
+  if (typeof humanHandoffEnabled === "boolean") {
+    botSettings.humanHandoffEnabled = humanHandoffEnabled;
+    saveSettings();
+    console.log("Updated botSettings:", botSettings);
+    res.json({ success: true, settings: botSettings });
+  } else {
+    res.status(400).json({ error: "Invalid settings payload" });
+  }
 });
 
 app.post("/api/dashboard/mode", authMiddleware, (req, res) => {

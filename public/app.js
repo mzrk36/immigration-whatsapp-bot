@@ -30,6 +30,7 @@ const sendForm = document.getElementById('send-form');
 const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
 const composerOverlay = document.getElementById('composer-overlay');
+const toggleHumanHandoff = document.getElementById('toggle-human-handoff');
 
 // Login Handling
 loginForm.addEventListener('submit', async (e) => {
@@ -45,6 +46,7 @@ loginForm.addEventListener('submit', async (e) => {
         if (res.ok) {
             loginScreen.classList.remove('active');
             dashboardScreen.classList.add('active');
+            fetchSettings();
             startPolling();
         } else {
             loginError.classList.remove('hidden');
@@ -52,6 +54,42 @@ loginForm.addEventListener('submit', async (e) => {
     } catch (err) {
         loginError.innerText = 'Network error';
         loginError.classList.remove('hidden');
+    }
+});
+
+// Settings Handling
+async function fetchSettings() {
+    try {
+        const res = await fetch('/api/dashboard/settings', {
+            headers: { 'Authorization': `Basic ${apiToken}` }
+        });
+        if (res.ok) {
+            const settings = await res.json();
+            toggleHumanHandoff.checked = !!settings.humanHandoffEnabled;
+        }
+    } catch (err) {
+        console.error('Failed to fetch settings', err);
+    }
+}
+
+toggleHumanHandoff.addEventListener('change', async () => {
+    const enabled = toggleHumanHandoff.checked;
+    try {
+        const res = await fetch('/api/dashboard/settings', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Basic ${apiToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ humanHandoffEnabled: enabled })
+        });
+        if (!res.ok) {
+            toggleHumanHandoff.checked = !enabled;
+            alert('Failed to update Human Handoff setting');
+        }
+    } catch (err) {
+        toggleHumanHandoff.checked = !enabled;
+        alert('Network error while updating setting');
     }
 });
 
@@ -188,7 +226,7 @@ function renderActiveChat(uid, session) {
             senderName = 'Customer';
         } else if (msg.from === 'bot') {
             div.className = 'message msg-bot';
-            senderName = 'ImmiWing AI';
+            senderName = 'ImmiWings AI';
         } else {
             div.className = 'message msg-owner';
             senderName = 'You';

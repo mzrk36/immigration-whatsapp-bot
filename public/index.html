@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ImmiWing Agent Dashboard</title>
+    <title>ImmiWings Agent Dashboard</title>
     <link rel="stylesheet" href="style.css?v=2">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -13,7 +13,7 @@
         <div class="login-glass">
             <div class="logo-area">
                 <i class="fa-solid fa-headset fa-3x"></i>
-                <h1>ImmiWing Handoff</h1>
+                <h1>ImmiWings Handoff</h1>
             </div>
             <form id="login-form">
                 <div class="input-group">
@@ -29,10 +29,20 @@
     <div id="dashboard-screen" class="screen">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <h2><i class="fa-solid fa-globe"></i> ImmiWing</h2>
+                <h2><i class="fa-solid fa-globe"></i> ImmiWings</h2>
                 <button id="logout-btn"><i class="fa-solid fa-sign-out-alt"></i></button>
             </div>
             
+            <div class="sidebar-settings">
+                <div class="setting-toggle">
+                    <span><i class="fa-solid fa-headset"></i> Option 7 (Human Agent)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-human-handoff" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+
             <div class="sidebar-filters">
                 <button class="filter-btn active" data-filter="all">All Chats</button>
                 <button class="filter-btn" data-filter="WAITING">Waiting <span id="waiting-badge" class="badge hidden">0</span></button>
